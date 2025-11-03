@@ -1,5 +1,6 @@
 import { errors } from 'celebrate'
 import cookieParser from 'cookie-parser'
+import csurf from 'csurf'
 import cors from 'cors'
 import 'dotenv/config'
 import express, { json, urlencoded } from 'express'
@@ -15,14 +16,26 @@ const app = express()
 
 app.use(cookieParser())
 
-app.use(cors())
-// app.use(cors({ origin: ORIGIN_ALLOW, credentials: true }));
-// app.use(express.static(path.join(__dirname, 'public')));
-
-app.use(serveStatic(path.join(__dirname, 'public')))
+app.use(cors({ 
+    origin: process.env.ORIGIN_ALLOW, 
+    credentials: true 
+}));
 
 app.use(urlencoded({ extended: true }))
 app.use(json())
+
+const csrfProtection = csurf({
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict'
+  }
+})
+
+app.use(csrfProtection)
+
+app.use(serveStatic(path.join(__dirname, 'public')))
+// app.use(express.static(path.join(__dirname, 'public')));
 
 app.options('*', cors())
 app.use(routes)
@@ -34,7 +47,7 @@ app.use(errorHandler)
 const bootstrap = async () => {
     try {
         await mongoose.connect(DB_ADDRESS)
-        await app.listen(PORT, () => console.log('ok'))
+        await app.listen(3000, '0.0.0.0', () => console.log('ok'))
     } catch (error) {
         console.error(error)
     }
