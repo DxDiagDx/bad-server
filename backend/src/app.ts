@@ -32,7 +32,15 @@ const csrfProtection = csurf({
   }
 })
 
-app.use(csrfProtection)
+app.use((req, res, next) => {
+  const isAuthPath = req.path.startsWith('/auth/');
+  const isModifyingMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
+  
+  if (isModifyingMethod && !isAuthPath) {
+    return csrfProtection(req, res, next);
+  }
+  next();
+});
 
 app.use(serveStatic(path.join(__dirname, 'public')))
 // app.use(express.static(path.join(__dirname, 'public')));
