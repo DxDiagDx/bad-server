@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express'
 import { FilterQuery, Error as MongooseError, Types } from 'mongoose'
+import { PipelineStage } from 'mongoose';
 import BadRequestError from '../errors/bad-request-error'
 import NotFoundError from '../errors/not-found-error'
 import Order, { IOrder } from '../models/order'
@@ -28,15 +29,15 @@ export const getOrders = async (
             search,
         } = req.query
 
+        // Нормализация лимитов
+        const normalizedLimit = Math.min(Math.max(Number(limit), 1), 10); // 1-10
+        const normalizedPage = Math.max(Number(page), 1); // минимум 1
+
         const filters: FilterQuery<Partial<IOrder>> = {}
 
-        if (status) {
-            if (typeof status === 'object') {
-                Object.assign(filters, status)
-            }
-            if (typeof status === 'string') {
-                filters.status = status
-            }
+        // Только разрешенные поля
+        if (status && typeof status === 'string') {
+            filters.status = status;
         }
 
         if (totalAmountFrom) {
@@ -67,7 +68,8 @@ export const getOrders = async (
             }
         }
 
-        const aggregatePipeline: any[] = [
+        // Агрегация без any
+        const aggregatePipeline: PipelineStage[] = [
             { $match: filters },
             {
                 $lookup: {
@@ -89,11 +91,13 @@ export const getOrders = async (
             { $unwind: '$products' },
         ]
 
-        if (search) {
-            const searchRegex = new RegExp(search as string, 'i')
+        if (search && typeof search === 'string') {
+            // Экранирование RegExp
+            const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const searchRegex = new RegExp(escapedSearch, 'i')
             const searchNumber = Number(search)
 
-            const searchConditions: any[] = [{ 'products.title': searchRegex }]
+            const searchConditions: object[] = [{ 'products.title': searchRegex }]
 
             if (!Number.isNaN(searchNumber)) {
                 searchConditions.push({ orderNumber: searchNumber })
@@ -104,20 +108,24 @@ export const getOrders = async (
                     $or: searchConditions,
                 },
             })
-
-            filters.$or = searchConditions
         }
 
-        const sort: { [key: string]: any } = {}
+        // Только разрешенные поля
+        const allowedSortFields = ['createdAt', 'totalAmount', 'orderNumber'];
+        const sort: { [key: string]: 1 | -1 } = {}
 
-        if (sortField && sortOrder) {
-            sort[sortField as string] = sortOrder === 'desc' ? -1 : 1
+        if (sortField && typeof sortField === 'string' && 
+            allowedSortFields.includes(sortField) && sortOrder) {
+            sort[sortField] = sortOrder === 'desc' ? -1 : 1
+        } else {
+            // default sort
+            sort.createdAt = -1;
         }
 
         aggregatePipeline.push(
             { $sort: sort },
-            { $skip: (Number(page) - 1) * Number(limit) },
-            { $limit: Number(limit) },
+            { $skip: (normalizedPage - 1) * normalizedLimit },
+            { $limit: normalizedLimit },
             {
                 $group: {
                     _id: '$_id',
@@ -133,15 +141,15 @@ export const getOrders = async (
 
         const orders = await Order.aggregate(aggregatePipeline)
         const totalOrders = await Order.countDocuments(filters)
-        const totalPages = Math.ceil(totalOrders / Number(limit))
+        const totalPages = Math.ceil(totalOrders / normalizedLimit)
 
         res.status(200).json({
             orders,
             pagination: {
                 totalOrders,
                 totalPages,
-                currentPage: Number(page),
-                pageSize: Number(limit),
+                currentPage: normalizedPage,
+                pageSize: normalizedLimit,
             },
         })
     } catch (error) {
