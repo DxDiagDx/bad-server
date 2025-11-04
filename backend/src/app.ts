@@ -27,6 +27,11 @@ app.use(cors({
 
 app.use(urlencoded({ extended: true }))
 app.use(json())
+app.use(serveStatic(path.join(__dirname, 'public')))
+// app.use(express.static(path.join(__dirname, 'public')));
+
+app.options('*', cors())
+app.use(routes)
 
 const csrfProtection = csurf({
   cookie: {
@@ -46,11 +51,6 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(serveStatic(path.join(__dirname, 'public')))
-// app.use(express.static(path.join(__dirname, 'public')));
-
-app.options('*', cors())
-app.use(routes)
 app.use(errors())
 app.use(errorHandler)
 
