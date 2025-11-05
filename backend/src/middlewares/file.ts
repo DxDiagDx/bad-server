@@ -2,9 +2,19 @@ import { Request, Express } from 'express'
 import multer, { FileFilterCallback } from 'multer'
 import { v4 as uuidv4 } from 'uuid'
 import { join, extname } from 'path'
+import fs from 'fs';
 
 type DestinationCallback = (error: Error | null, destination: string) => void
 type FileNameCallback = (error: Error | null, filename: string) => void
+
+const tempDir = join(
+    __dirname,
+    process.env.UPLOAD_PATH_TEMP
+        ? `../public/${process.env.UPLOAD_PATH_TEMP}`
+        : '../public'
+)
+
+fs.mkdirSync(tempDir, { recursive: true })
 
 const storage = multer.diskStorage({
     destination: (
@@ -12,15 +22,7 @@ const storage = multer.diskStorage({
         _file: Express.Multer.File,
         cb: DestinationCallback
     ) => {
-        cb(
-            null,
-            join(
-                __dirname,
-                process.env.UPLOAD_PATH_TEMP
-                    ? `../public/${process.env.UPLOAD_PATH_TEMP}`
-                    : '../public'
-            )
-        )
+        cb(null, tempDir)
     },
 
     filename: (
@@ -52,4 +54,11 @@ const fileFilter = (
     return cb(null, true)
 }
 
-export default multer({ storage, fileFilter })
+// Добавляем лимит
+export default multer({ 
+    storage, 
+    fileFilter,
+    limits: { 
+        fileSize: 10 * 1024 * 1024 // 10MB лимит
+    } 
+})
