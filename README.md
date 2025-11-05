@@ -1,6 +1,6 @@
 # Проектная работа "WebLarek. Плохой сервер.", спринт 17
 
-Ссылка на проект https://github.com/DxDiagDx/bad-server
+**GitHub Repository:** https://github.com/DxDiagDx/bad-server
 
 ## Подготовка к работе
 1. Склонировать репозиторий
