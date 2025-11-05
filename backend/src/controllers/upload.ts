@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from 'express'
 import { constants } from 'http2'
+import fs from 'fs';
 import BadRequestError from '../errors/bad-request-error'
 import { validateImageFormat } from '../utils/fileValidator';
-import fs from 'fs';
 
 export const uploadFile = async (
     req: Request,

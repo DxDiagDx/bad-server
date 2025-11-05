@@ -1,14 +1,14 @@
 import { NextFunction, Request, Response } from 'express'
 import { FilterQuery, Error as MongooseError, Types, PipelineStage } from 'mongoose'
+import DOMPurify from 'dompurify';
+import { JSDOM } from 'jsdom';
 import BadRequestError from '../errors/bad-request-error'
 import NotFoundError from '../errors/not-found-error'
 import Order, { IOrder } from '../models/order'
 import Product, { IProduct } from '../models/product'
 import User from '../models/user'
-import DOMPurify from 'dompurify';
-import { JSDOM } from 'jsdom';
 
-const window = new JSDOM('').window;
+const { window } = new JSDOM('');
 const domPurify = DOMPurify(window);
 
 // eslint-disable-next-line max-len

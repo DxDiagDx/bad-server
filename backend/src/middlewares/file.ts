@@ -1,6 +1,6 @@
 import { Request, Express } from 'express'
 import multer, { FileFilterCallback } from 'multer'
-import { v4 as uuidv4 } from 'uuid'
+import { randomUUID } from 'crypto';
 import { join, extname } from 'path'
 import fs from 'fs';
 
@@ -30,7 +30,7 @@ const storage = multer.diskStorage({
         file: Express.Multer.File,
         cb: FileNameCallback
     ) => {
-        cb(null, uuidv4() + extname(file.originalname))
+        cb(null, randomUUID() + extname(file.originalname))
     },
 })
 

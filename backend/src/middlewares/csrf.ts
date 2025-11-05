@@ -2,9 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 
 // Генерация CSRF токена
-const generateCSRFToken = (): string => {
-  return crypto.randomBytes(32).toString('hex');
-};
+const generateCSRFToken = (): string => crypto.randomBytes(32).toString('hex');
 
 // Middleware для установки CSRF токена
 export const setCSRFToken = (req: Request, res: Response, next: NextFunction): void => {
