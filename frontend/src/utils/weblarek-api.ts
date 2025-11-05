@@ -1,5 +1,4 @@
 import { API_URL, CDN_URL } from '@constants'
-
 import {
     ICustomerPaginationResult,
     ICustomerResult,
@@ -33,6 +32,7 @@ export type ApiListResponse<Type> = {
 class Api {
     private readonly baseUrl: string
     protected options: RequestInit
+    protected csrfToken: string = ''
 
     constructor(baseUrl: string, options: RequestInit = {}) {
         this.baseUrl = baseUrl
@@ -41,6 +41,8 @@ class Api {
                 ...((options.headers as object) ?? {}),
             },
         }
+        // Автоматически получаем CSRF токен при инициализации
+        this.getCsrfToken()
     }
 
     protected handleResponse<T>(response: Response): Promise<T> {
@@ -65,6 +67,49 @@ class Api {
         }
     }
 
+    // Метод для получения CSRF токена
+    protected async getCsrfToken(): Promise<string> {
+        try {
+            const response = await this.request<{ csrfToken: string }>('/api/csrf-token', {
+                method: 'GET',
+                credentials: 'include'
+            })
+            this.csrfToken = response.csrfToken
+            return this.csrfToken
+        } catch (error) {
+            console.warn('Failed to get CSRF token:', error)
+            return ''
+        }
+    }
+
+    // Обновленный метод запроса с CSRF защитой
+    protected async requestWithCsrf<T>(endpoint: string, options: RequestInit, needsCsrf: boolean = true) {
+        const headers = {
+            ...options.headers,
+            ...(needsCsrf && this.csrfToken ? { 'X-CSRF-Token': this.csrfToken } : {})
+        }
+
+        try {
+            return await this.request<T>(endpoint, {
+                ...options,
+                headers
+            })
+        } catch (error: any) {
+            // Если CSRF токен устарел, обновляем и повторяем запрос
+            if (error.statusCode === 403 && error.message?.includes('CSRF')) {
+                await this.getCsrfToken()
+                return await this.request<T>(endpoint, {
+                    ...options,
+                    headers: {
+                        ...options.headers,
+                        'X-CSRF-Token': this.csrfToken
+                    }
+                })
+            }
+            throw error
+        }
+    }
+
     private refreshToken = () => {
         return this.request<UserResponseToken>('/auth/token', {
             method: 'GET',
@@ -77,14 +122,14 @@ class Api {
         options: RequestInit
     ) => {
         try {
-            return await this.request<T>(endpoint, options)
+            return await this.requestWithCsrf<T>(endpoint, options)
         } catch (error) {
             const refreshData = await this.refreshToken()
             if (!refreshData.success) {
                 return Promise.reject(refreshData)
             }
             setCookie('accessToken', refreshData.accessToken)
-            return await this.request<T>(endpoint, {
+            return await this.requestWithCsrf<T>(endpoint, {
                 ...options,
                 headers: {
                     ...options.headers,
@@ -353,6 +398,11 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
                 Authorization: `Bearer ${getCookie('accessToken')}`,
             },
         })
+    }
+
+    // Публичный метод для получения CSRF токена
+    getCsrfTokenPublic = (): Promise<string> => {
+        return this.getCsrfToken()
     }
 }
 

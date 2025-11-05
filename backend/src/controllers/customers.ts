@@ -29,6 +29,9 @@ export const getCustomers = async (
             search,
         } = req.query
 
+        const normalizedLimit = Math.min(Math.max(Number(limit), 1), 10);
+        const normalizedPage = Math.max(Number(page), 1);
+
         const filters: FilterQuery<Partial<IUser>> = {}
 
         if (registrationDateFrom) {
@@ -91,8 +94,9 @@ export const getCustomers = async (
             }
         }
 
-        if (search) {
-            const searchRegex = new RegExp(search as string, 'i')
+        if (search && typeof search === 'string') {
+            const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const searchRegex = new RegExp(escapedSearch, 'i')
             const orders = await Order.find(
                 {
                     $or: [{ deliveryAddress: searchRegex }],
@@ -108,16 +112,20 @@ export const getCustomers = async (
             ]
         }
 
-        const sort: { [key: string]: any } = {}
+        const allowedSortFields = ['createdAt', 'totalAmount', 'orderCount', 'name'];
+        const sort: { [key: string]: 1 | -1 } = {}
 
-        if (sortField && sortOrder) {
-            sort[sortField as string] = sortOrder === 'desc' ? -1 : 1
+        if (sortField && typeof sortField === 'string' && 
+            allowedSortFields.includes(sortField) && sortOrder) {
+            sort[sortField] = sortOrder === 'desc' ? -1 : 1
+        } else {
+            sort.createdAt = -1;
         }
 
         const options = {
             sort,
-            skip: (Number(page) - 1) * Number(limit),
-            limit: Number(limit),
+            skip: (normalizedPage - 1) * normalizedLimit,
+            limit: normalizedLimit,
         }
 
         const users = await User.find(filters, null, options).populate([
@@ -137,15 +145,15 @@ export const getCustomers = async (
         ])
 
         const totalUsers = await User.countDocuments(filters)
-        const totalPages = Math.ceil(totalUsers / Number(limit))
+        const totalPages = Math.ceil(totalUsers / normalizedLimit)
 
         res.status(200).json({
             customers: users,
             pagination: {
                 totalUsers,
                 totalPages,
-                currentPage: Number(page),
-                pageSize: Number(limit),
+                currentPage: normalizedPage,
+                pageSize: normalizedLimit,
             },
         })
     } catch (error) {
