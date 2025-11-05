@@ -6,6 +6,11 @@ import NotFoundError from '../errors/not-found-error'
 import Order, { IOrder } from '../models/order'
 import Product, { IProduct } from '../models/product'
 import User from '../models/user'
+import DOMPurify from 'dompurify';
+import { JSDOM } from 'jsdom';
+
+const window = new JSDOM('').window;
+const domPurify = DOMPurify(window);
 
 // eslint-disable-next-line max-len
 // GET /orders?page=2&limit=5&sort=totalAmount&order=desc&orderDateFrom=2024-07-01&orderDateTo=2024-08-01&status=delivering&totalAmountFrom=100&totalAmountTo=1000&search=%2B1
@@ -302,6 +307,8 @@ export const createOrder = async (
         const { address, payment, phone, total, email, items, comment } =
             req.body
 
+        const sanitizedComment = comment ? domPurify.sanitize(comment) : '';
+
         items.forEach((id: Types.ObjectId) => {
             const product = products.find((p) => (p._id as Types.ObjectId).equals(id))
             if (!product) {
@@ -323,7 +330,7 @@ export const createOrder = async (
             payment,
             phone,
             email,
-            comment,
+            comment: sanitizedComment,
             customer: userId,
             deliveryAddress: address,
         })
