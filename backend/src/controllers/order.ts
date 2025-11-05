@@ -45,6 +45,19 @@ export const getOrders = async (
         const normalizedPage = Math.max(Number(page), 1); // минимум 1
 
         const filters: FilterQuery<Partial<IOrder>> = {}
+        // Валидация входных параметров
+        if (status && typeof status === 'string') {
+            if (!/^[a-zA-Z0-9_-]+$/.test(status)) {
+                return next(new BadRequestError('Невалидный параметр статуса'));
+            }
+            filters.status = status;
+        }
+
+        if (search && typeof search === 'string') {
+            if (/[^\w\s]/.test(search)) {
+                return next(new BadRequestError('Невалидный поисковый запрос'));
+            }
+        }
 
         // Только разрешенные поля
         if (status && typeof status === 'string') {
