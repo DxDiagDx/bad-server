@@ -15,8 +15,6 @@ import { limiter, authLimiter } from './middlewares/rate-limit';
 const { PORT = 3000 } = process.env
 const app = express()
 
-app.use(limiter);
-app.use('/auth', authLimiter);
 
 app.use(cookieParser())
 
@@ -51,6 +49,8 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use(limiter);
+app.use('/auth', authLimiter);
 app.use(errors())
 app.use(errorHandler)
 
