@@ -1,6 +1,5 @@
 import { NextFunction, Request, Response } from 'express'
-import { FilterQuery, Error as MongooseError, Types } from 'mongoose'
-import { PipelineStage } from 'mongoose';
+import { FilterQuery, Error as MongooseError, Types, PipelineStage } from 'mongoose'
 import BadRequestError from '../errors/bad-request-error'
 import NotFoundError from '../errors/not-found-error'
 import Order, { IOrder } from '../models/order'
