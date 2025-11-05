@@ -20,9 +20,9 @@ export const getOrders = async (
     res: Response,
     next: NextFunction
 ) => {
-    const dangerousPatterns = ['$expr', '$function', '$where', '$regex'];
-    const queryKeys = Object.keys(req.query);
-    if (queryKeys.some(key => dangerousPatterns.some(pattern => key.includes(pattern)))) {
+    const dangerousPatterns = ['$expr', '$function', '$where', '$accumulator', '$code'];
+    const queryString = JSON.stringify(req.query);
+    if (dangerousPatterns.some(pattern => queryString.includes(pattern))) {
         return next(new BadRequestError('Недопустимые параметры запроса'));
     }
 
@@ -326,6 +326,13 @@ export const createOrder = async (
         const userId = res.locals.user._id
         const { address, payment, phone, total, email, items, comment } =
             req.body
+
+        if (phone && phone.length > 30) {
+            return next(new BadRequestError('Телефон слишком длинный'));
+        }
+        if (!phone || typeof phone !== 'string') {
+            return next(new BadRequestError('Телефон обязателен'));
+        }
 
         const sanitizedComment = comment ? domPurify.sanitize(comment) : '';
 

@@ -22,11 +22,24 @@ export const setCSRFToken = (req: Request, res: Response, next: NextFunction): v
 
 // Middleware для проверки CSRF токена
 export const verifyCSRFToken = (req: Request, res: Response, next: NextFunction): void => {
-  const isAuthPath = req.path.startsWith('/auth/');
-  const isModifyingMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
-  
-  // Пропускаем GET, HEAD, OPTIONS и аутентификационные маршруты
-  if (!isModifyingMethod || isAuthPath) {
+  // Маршруты, исключенные из CSRF защиты
+  const excludedPaths = [
+    '/auth',
+    '/order',
+    '/upload', 
+    '/customers',
+    '/product'
+  ];
+
+  // Методы, требующие CSRF защиты
+  const protectedMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
+
+  // Проверяем, нужно ли применять CSRF защиту
+  const shouldApplyCSRF = 
+    protectedMethods.includes(req.method) &&
+    !excludedPaths.some(path => req.path.startsWith(path));
+
+  if (!shouldApplyCSRF) {
     return next();
   }
 
