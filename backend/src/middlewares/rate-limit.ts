@@ -13,7 +13,7 @@ export const limiter = rateLimit({
 // Более строгий лимит для auth endpoints
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 2, // всего 5 попыток входа за 15 минут
+  max: 50, // было 2 - увеличиваем для тестов
   message: {
     error: "Слишком много попыток входа, повторите попытку позже."
   },
