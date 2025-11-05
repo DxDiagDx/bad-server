@@ -20,13 +20,12 @@ export const getOrders = async (
     res: Response,
     next: NextFunction
 ) => {
-    const dangerousPatterns = ['$expr', '$function', '$where', '$regex', '$'];
-    if (Object.keys(req.query).some(key => 
-        dangerousPatterns.some(pattern => key.includes(pattern))
-    )) {
+    const dangerousPatterns = ['$expr', '$function', '$where', '$regex'];
+    const queryKeys = Object.keys(req.query);
+    if (queryKeys.some(key => dangerousPatterns.some(pattern => key.includes(pattern)))) {
         return next(new BadRequestError('Недопустимые параметры запроса'));
     }
-    
+
     try {
         const {
             page = 1,
